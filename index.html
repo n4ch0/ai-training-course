@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Training — Master's Curriculum</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0c10;--bg2:#0f1218;--bg4:#1a2030;
+  --border:#1e2535;--border2:#252d40;
+  --text:#e8eaf0;--text2:#8a92a8;--text3:#5a6278;
+  --accent:#4f7fff;--accent2:#7ba3ff;
+  --gold:#c9a84c;--gold2:#e8c870;
+  --green:#3daa6e;--green2:#5ec98a;
+  --red:#e05555;
+  --r:10px;--r2:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Instrument Sans',sans-serif;
+  font-size:14px;line-height:1.6;
+  display:flex;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(79,127,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(79,127,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+
+/* SIDEBAR */
+#sidebar{
+  width:256px;min-width:256px;background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;height:100vh;
+  position:relative;z-index:10;flex-shrink:0;
+}
+.sb-head{padding:22px 18px 14px;border-bottom:1px solid var(--border)}
+.sb-logo{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:3px;margin-bottom:5px}
+.sb-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:700}
+.sb-sub{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px}
+
+.sb-prog{padding:10px 18px;border-bottom:1px solid var(--border)}
+.prog-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:5px;font-family:'JetBrains Mono',monospace}
+.prog-track{height:3px;background:var(--border2);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .4s}
+
+.sync-row{
+  display:flex;align-items:center;gap:7px;
+  padding:7px 18px;border-bottom:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);
+}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s}
+.sync-dot.ok{background:var(--green)}
+.sync-dot.busy{background:var(--gold);animation:pulse 1s infinite}
+.sync-dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.sb-nav{flex:1;overflow-y:auto;padding:5px 0;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.nav-row{
+  display:flex;align-items:center;gap:9px;
+  padding:7px 18px;cursor:pointer;
+  transition:background .12s;border-left:2px solid transparent;
+  user-select:none;
+}
+.nav-row:hover{background:rgba(79,127,255,.06)}
+.nav-row.active{background:rgba(79,127,255,.1);border-left-color:var(--accent)}
+.nav-row.done .nav-n{background:var(--green);border-color:var(--green);color:#fff}
+.nav-n{
+  width:19px;height:19px;border-radius:50%;
+  background:var(--bg4);border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3);
+  flex-shrink:0;transition:all .2s;
+}
+.nav-lbl{font-size:11px;color:var(--text2);flex:1;line-height:1.3}
+.nav-row.active .nav-lbl{color:var(--text)}
+.nav-ck{font-size:9px;color:var(--green);opacity:0;transition:opacity .2s;flex-shrink:0}
+.nav-row.done .nav-ck{opacity:1}
+
+.sb-foot{padding:10px 18px;border-top:1px solid var(--border);flex-shrink:0}
+.stage-btns{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.stage-btn{
+  font-size:9px;font-family:'JetBrains Mono',monospace;
+  padding:3px 7px;border-radius:3px;cursor:pointer;
+  border:1px solid var(--border2);color:var(--text3);
+  transition:all .12s;user-select:none;
+}
+.stage-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* MAIN */
+#main{
+  flex:1;overflow-y:auto;height:100vh;
+  position:relative;z-index:1;
+  scrollbar-width:thin;scrollbar-color:var(--border2) transparent;
+}
+#main::-webkit-scrollbar{width:4px}
+#main::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.panel{display:none}
+.panel.active{display:block;animation:fadeUp .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* DASHBOARD */
+.dashboard{padding:44px 50px;max-width:840px}
+.dash-eye{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:3px;margin-bottom:12px}
+.dash-h{font-family:'Playfair Display',serif;font-size:44px;font-weight:900;line-height:1.05;letter-spacing:-1px;margin-bottom:12px}
+.dash-h em{color:var(--accent);font-style:normal}
+.dash-p{font-size:15px;color:var(--text2);max-width:500px;line-height:1.7;margin-bottom:36px}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:40px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.stat-n{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;line-height:1;margin-bottom:4px}
+.c-blue{color:var(--accent)}.c-gold{color:var(--gold)}.c-green{color:var(--green)}
+.stat-l{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+
+.sec-lbl{
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;
+  text-transform:uppercase;color:var(--text3);margin-bottom:12px;
+  display:flex;align-items:center;gap:10px;
+}
+.sec-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.stage-sec{margin-bottom:32px}
+.stage-hdr{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.stage-big-n{font-family:'Playfair Display',serif;font-size:40px;font-weight:900;color:var(--border2);line-height:1}
+.stage-info-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:1px}
+.stage-info-range{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+
+.mod-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mod-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);padding:13px 13px 10px;
+  cursor:pointer;transition:all .15s;position:relative;overflow:hidden;
+}
+.mod-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border2);transition:background .15s}
+.mod-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.mod-card:hover::before{background:var(--accent)}
+.mod-card.done::before{background:var(--green)}
+.mod-card.done{border-color:rgba(61,170,110,.25)}
+.mc-num{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:5px}
+.mc-title{font-size:12px;font-weight:500;color:var(--text);line-height:1.3;margin-bottom:7px}
+.mod-card.done .mc-title{color:var(--text3)}
+.mc-bar{height:2px;background:var(--border);border-radius:1px;overflow:hidden}
+.mc-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s}
+.mod-card.done .mc-fill{background:var(--green)}
+.mc-sub{font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:5px}
+
+.toolkit{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:40px}
+.tool-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.tool-icon{font-size:18px;margin-bottom:6px}
+.tool-name{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px}
+.tool-role{font-size:11px;color:var(--text3);line-height:1.5}
+
+/* MODULE PAGE */
+.mod-page{padding:44px 50px;max-width:860px}
+.mod-eye{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.mod-eye-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:2px}
+.badge{font-size:9px;font-family:'JetBrains Mono',monospace;padding:3px 8px;border-radius:3px}
+.b-dur{background:rgba(79,127,255,.12);color:var(--accent2);border:1px solid rgba(79,127,255,.2)}
+.b-lvl{background:rgba(201,168,76,.1);color:var(--gold2);border:1px solid rgba(201,168,76,.2)}
+.mod-title{font-family:'Playfair Display',serif;font-size:34px;font-weight:900;color:var(--text);line-height:1.1;letter-spacing:-.5px;margin-bottom:14px}
+.mod-summary{font-size:14px;color:var(--text2);line-height:1.7;max-width:660px;margin-bottom:20px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:30px}
+.chip{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:var(--r2);font-size:10px;font-family:'JetBrains Mono',monospace;border:1px solid}
+.chip-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.ch-claude{background:rgba(79,127,255,.08);border-color:rgba(79,127,255,.2);color:var(--accent2)}
+.ch-gpt{background:rgba(61,170,110,.08);border-color:rgba(61,170,110,.2);color:var(--green2)}
+.ch-gem{background:rgba(201,168,76,.08);border-color:rgba(201,168,76,.2);color:var(--gold2)}
+.ch-nb{background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.2);color:#a78bfa}
+
+.outcomes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:32px}
+.outcome{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);font-size:12px;color:var(--text2);line-height:1.5}
+.out-arr{color:var(--accent);font-size:11px;margin-top:1px;flex-shrink:0;font-family:'JetBrains Mono',monospace}
+
+/* TOPICS */
+.topics-wrap{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:32px}
+.topic-row{
+  display:flex;align-items:stretch;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .12s;
+}
+.topic-row:last-child{border-bottom:none}
+.topic-row:hover{background:rgba(79,127,255,.04)}
+.topic-row.done{background:rgba(61,170,110,.04)}
+
+.t-check{width:44px;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--border);flex-shrink:0}
+.t-box{width:15px;height:15px;border-radius:3px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.topic-row.done .t-box{background:var(--green);border-color:var(--green)}
+.t-tick{font-size:8px;color:#fff;opacity:0;transition:opacity .12s}
+.topic-row.done .t-tick{opacity:1}
+
+.t-name-col{width:190px;padding:12px 14px;border-right:1px solid var(--border);flex-shrink:0}
+.t-name{font-size:12px;font-weight:500;color:var(--text);line-height:1.3}
+.topic-row.done .t-name{color:var(--text3);text-decoration:line-through}
+.t-desc{padding:12px 14px;flex:1;font-size:12px;color:var(--text2);line-height:1.5}
+
+/* ACTIONS */
+.mod-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:4px}
+.btn-complete{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:10px 22px;background:var(--accent);color:#fff;
+  border:none;border-radius:var(--r2);
+  font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s;
+}
+.btn-complete:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-complete.done{background:var(--green)}
+.btn-next{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:10px 18px;background:transparent;color:var(--text2);
+  border:1px solid var(--border2);border-radius:var(--r2);
+  font-family:'Instrument Sans',sans-serif;font-size:13px;
+  cursor:pointer;transition:all .15s;
+}
+.btn-next:hover{border-color:var(--accent);color:var(--accent)}
+.btn-reset{
+  margin-left:auto;padding:10px 14px;
+  background:transparent;color:var(--text3);
+  border:1px solid var(--border);border-radius:var(--r2);
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  cursor:pointer;transition:all .15s;
+}
+.btn-reset:hover{border-color:var(--red);color:var(--red)}
+
+/* SETUP MODAL */
+#setup-overlay{
+  position:fixed;inset:0;background:rgba(10,12,16,.97);
+  z-index:1000;display:flex;align-items:center;justify-content:center;
+}
+.setup-box{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:14px;padding:44px;max-width:460px;width:90%;
+}
+.setup-logo{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:3px;margin-bottom:14px}
+.setup-h{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;margin-bottom:10px}
+.setup-p{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:24px}
+.setup-lbl{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text3);margin-bottom:7px;letter-spacing:1px}
+.setup-input{
+  width:100%;padding:11px 14px;
+  background:var(--bg4);border:1px solid var(--border2);
+  border-radius:var(--r2);color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:14px;
+  outline:none;transition:border-color .15s;
+}
+.setup-input:focus{border-color:var(--accent)}
+.setup-hint{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5}
+.setup-err{font-size:11px;color:var(--red);margin-top:6px;display:none}
+.setup-go{
+  margin-top:24px;width:100%;padding:13px;
+  background:var(--accent);color:#fff;border:none;border-radius:var(--r2);
+  font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:600;
+  cursor:pointer;transition:background .15s;
+}
+.setup-go:hover{background:var(--accent2)}
+
+@media(max-width:900px){
+  .outcomes{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .mod-grid{grid-template-columns:1fr 1fr}
+  .toolkit{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  #sidebar{width:200px;min-width:200px}
+  .mod-grid{grid-template-columns:1fr}
+  .dashboard,.mod-page{padding:28px 20px}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup-overlay">
+  <div class="setup-box">
+    <div class="setup-logo">MSc · AI</div>
+    <div class="setup-h">Your Progress ID</div>
+    <div class="setup-p">Enter a short personal ID to save and load your progress. Use the same ID on every device — phone, tablet, laptop — to pick up exactly where you left off.</div>
+    <div class="setup-lbl">SYNC ID</div>
+    <input class="setup-input" id="id-input" type="text" placeholder="e.g. alex-ai-2024" autocomplete="off" spellcheck="false">
+    <div class="setup-hint">Letters, numbers, and hyphens only. At least 3 characters.</div>
+    <div class="setup-err" id="id-err">Please enter a valid ID (letters, numbers, hyphens, min 3 chars)</div>
+    <button class="setup-go" id="go-btn">Start Learning →</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-head">
+    <div class="sb-logo">MSc · AI</div>
+    <div class="sb-title">AI Training</div>
+    <div class="sb-sub">Master's Curriculum</div>
+  </div>
+  <div class="sync-row">
+    <div class="sync-dot ok" id="sync-dot"></div>
+    <span id="sync-lbl">Saved locally</span>
+  </div>
+  <div class="sb-prog">
+    <div class="prog-lbl">
+      <span>Overall Progress</span>
+      <span id="pct-lbl">0%</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <div class="sb-nav" id="sb-nav">
+    <div class="nav-row active" id="nav-dash" onclick="showDash()">
+      <div class="nav-n" style="font-size:11px">⌂</div>
+      <div class="nav-lbl">Dashboard</div>
+    </div>
+  </div>
+  <div class="sb-foot">
+    <div class="stage-btns">
+      <div class="stage-btn" onclick="jumpStage(1)">Stage 1</div>
+      <div class="stage-btn" onclick="jumpStage(2)">Stage 2</div>
+      <div class="stage-btn" onclick="jumpStage(3)">Stage 3</div>
+      <div class="stage-btn" onclick="jumpStage(4)">Stage 4</div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- DASHBOARD -->
+  <div class="panel active" id="panel-dash">
+    <div class="dashboard">
+      <div class="dash-eye">MASTER'S IN ARTIFICIAL INTELLIGENCE</div>
+      <div class="dash-h">Your AI<br><em>Learning</em><br>Journey</div>
+      <div class="dash-p">22 modules. From programming fundamentals to agentic AI. A serious, structured path to practitioner-level mastery.</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-n c-blue" id="s-mods">0</div><div class="stat-l">modules complete</div></div>
+        <div class="stat"><div class="stat-n" id="s-topics">0</div><div class="stat-l">topics complete</div></div>
+        <div class="stat"><div class="stat-n c-gold">22</div><div class="stat-l">total modules</div></div>
+        <div class="stat"><div class="stat-n c-green">50–70</div><div class="stat-l">weeks estimated</div></div>
+      </div>
+      <div id="stage-secs"></div>
+      <div class="sec-lbl" style="margin-bottom:16px">LEARNING TOOLKIT</div>
+      <div class="toolkit">
+        <div class="tool-card"><div class="tool-icon">🎓</div><div class="tool-name">Claude Project</div><div class="tool-role">Primary professor — teaching, explanation, debugging across all 22 modules</div></div>
+        <div class="tool-card"><div class="tool-icon">🧮</div><div class="tool-name">ChatGPT GPTs</div><div class="tool-role">Maths Tutor · Code Reviewer · ML Debugger · Quiz Master</div></div>
+        <div class="tool-card"><div class="tool-icon">💎</div><div class="tool-name">Gemini Gems</div><div class="tool-role">Paper Reader · Project Architect · Quiz Master · Maths Tutor</div></div>
+        <div class="tool-card"><div class="tool-icon">📓</div><div class="tool-name">NotebookLM</div><div class="tool-role">Source-grounded research — papers, EU AI Act, your own notes</div></div>
+        <div class="tool-card"><div class="tool-icon">⚗️</div><div class="tool-name">Google Colab</div><div class="tool-role">Coding lab — run Python, train models, experiment with real data</div></div>
+        <div class="tool-card"><div class="tool-icon">🐙</div><div class="tool-name">GitHub</div><div class="tool-role">Portfolio and version control — commit every project from Day 1</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE PANELS (built by JS) -->
+  <div id="mod-panels"></div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+var STAGES = [
+  {n:1,name:'Foundations',range:'Modules 1–5',mods:[1,2,3,4,5]},
+  {n:2,name:'Core AI',range:'Modules 6–8',mods:[6,7,8]},
+  {n:3,name:'Modern AI Systems',range:'Modules 9–16',mods:[9,10,11,12,13,14,15,16]},
+  {n:4,name:'Advanced & Applied',range:'Modules 17–22',mods:[17,18,19,20,21,22]}
+];
+
+var MODS = [
+  {n:1,s:1,title:'Programming Fundamentals',dur:'4–5 Weeks',lvl:'Beginner',
+   tools:[['Claude Project','ch-claude'],['GPT: Code Reviewer','ch-gpt']],
+   summary:'The bedrock of everything that follows. Python properly — not just syntax, but how to think like a programmer. Plus SQL for querying data and Shell scripting for automating tasks.',
+   outcomes:['Write clean, idiomatic Python using functions, classes, and modules','Understand OOP and functional programming patterns','Query databases confidently using SQL including window functions','Automate file and pipeline tasks using Bash and Shell','Debug code systematically and read error messages effectively'],
+   topics:[['Python Basics','Variables, types, control flow, functions, error handling, file I/O'],['OOP in Python','Classes, inheritance, encapsulation, dunder methods, design patterns'],['Functional Python','Comprehensions, map/filter, lambdas, generators, decorators'],['Debugging','Reading tracebacks, pdb, writing defensive code, common mistakes'],['SQL Fundamentals','SELECT, JOIN, GROUP BY, subqueries, indexes — querying structured data'],['SQL for Data','Aggregations, window functions, CTEs, working with large datasets'],['Shell & Bash','Navigation, pipes, grep, awk, sed, environment variables'],['Shell Scripting','Automating repetitive data and pipeline tasks with bash scripts'],['Package Management','pip, conda, virtual environments, requirements.txt, pyproject.toml']]},
+
+  {n:2,s:1,title:'Software Engineering for AI',dur:'3–4 Weeks',lvl:'Beginner–Intermediate',
+   tools:[['Claude Project','ch-claude'],['GPT: Code Reviewer','ch-gpt']],
+   summary:'Build things that work reliably, repeatably, and collaboratively. These engineering practices separate hobbyists from professionals — and most AI learners skip them entirely.',
+   outcomes:['Use Git and GitHub fluently for version control and collaboration','Write tests for ML pipelines and data processing code','Structure AI projects cleanly with reproducible environments','Build and run CI/CD pipelines for ML code','Configure logging, environment variables, and secrets management'],
+   topics:[['Git & GitHub','Commits, branches, pull requests, merge conflicts, rebase, GitFlow'],['Project Structure','Cookiecutter for ML, separating data/code/config, reproducibility'],['Testing ML Code','pytest, unit testing pipelines, testing model outputs'],['Code Quality','PEP8, black, ruff, type hints, mypy, docstrings, code review'],['Logging & Config','Structured logging, log levels, .env files, 12-factor config'],['Virtual Environments','venv, conda, Docker basics — isolating environments'],['CI/CD for ML','GitHub Actions, automated testing, model validation pipelines'],['Packaging','Building Python packages, setuptools, publishing to PyPI'],['Documentation','Writing READMEs, Sphinx docs, notebooks as living documentation']]},
+
+  {n:3,s:1,title:'Foundations of Mathematics & Computing',dur:'4–5 Weeks',lvl:'Intermediate',
+   tools:[['Claude Project','ch-claude'],['GPT: Maths Tutor','ch-gpt'],['Gem: Maths Tutor','ch-gem']],
+   summary:'The mathematical language of AI. Build intuition for the structures and operations that underpin every algorithm — from linear regression to transformers.',
+   outcomes:['Manipulate vectors and matrices and understand what operations mean geometrically','Apply calculus to understand how neural networks learn via backpropagation','Use probability and statistics to reason about data and model outputs','Understand how computers store and process numbers at a low level'],
+   topics:[['Algebra Foundations','Functions, exponentials, logarithms, equations — the pre-calculus layer'],['Linear Algebra','Vectors, matrices, dot products, matrix multiplication, eigenvalues'],['Geometric Intuition','Transformations, projections, spans, basis — seeing the maths visually'],['Calculus','Derivatives, partial derivatives, gradients, chain rule'],['Probability','Distributions, expectation, variance, conditional probability, Bayes'],['Statistics','Hypothesis testing, confidence intervals, sampling, correlation'],['NumPy in Practice','Arrays, broadcasting, vectorisation — fast maths in Python'],['How Computers Work','Files, memory, processes, networking basics'],['Computing Basics','Binary, floating point, memory, CPUs']]},
+
+  {n:4,s:1,title:'Information Theory & Advanced Mathematics',dur:'2–3 Weeks',lvl:'Intermediate–Advanced',
+   tools:[['Claude Project','ch-claude'],['GPT: Maths Tutor','ch-gpt'],['Gem: Maths Tutor','ch-gem']],
+   summary:'The deeper mathematical layer that powers modern AI. Information theory explains why models are trained the way they are.',
+   outcomes:['Explain entropy, cross-entropy, and KL divergence and why they appear in AI training','Understand why cross-entropy loss is used to train language models','Apply graph theory to reason about graph neural networks','Read AI papers referencing information-theoretic concepts confidently'],
+   topics:[['Entropy','Shannon entropy, information content, measuring uncertainty in data'],['Cross-Entropy','Cross-entropy loss — the standard loss for classification and LLMs'],['KL Divergence','Measuring distance between distributions — foundational to VAEs and RLHF'],['Mutual Information','How much one variable tells you about another'],['Graph Theory','Nodes, edges, adjacency matrices, paths, directed vs undirected'],['Graph Neural Networks','How GNNs extend deep learning to graph-structured data'],['Optimisation Theory','Convexity, saddle points, local vs global minima']]},
+
+  {n:5,s:1,title:'Data Engineering',dur:'4–5 Weeks',lvl:'Intermediate',
+   tools:[['Claude Project','ch-claude'],['GPT: Code Reviewer','ch-gpt']],
+   summary:'Data is the fuel of AI. Where it comes from, how to collect and clean it at scale, how to label it, and how to build the pipelines that feed it into models.',
+   outcomes:['Build data collection pipelines using web scraping and APIs','Clean, validate, and transform messy real-world datasets','Design and implement data labeling workflows','Generate synthetic data to augment training sets','Build robust ETL pipelines using modern data engineering tools'],
+   topics:[['Web Scraping','BeautifulSoup, Scrapy, Playwright for dynamic pages, robots.txt'],['API Data Collection','REST/GraphQL APIs, pagination, rate limits, storage patterns'],['Data Cleaning','Handling nulls, outliers, duplicates, schema validation with Pydantic'],['Data Transformation','Pandas, Polars, feature engineering, normalisation, encoding'],['Data Labeling','Label Studio, Prodigy, human-in-the-loop, quality control'],['Synthetic Data','Generating training data with LLMs, augmentation, data flywheel'],['ETL Pipelines','Airflow, Prefect, dbt — orchestrating data workflows at scale'],['Data Versioning','DVC, Delta Lake, dataset cards — tracking what trained what model'],['Data Governance','PII handling, consent, data lineage, compliance basics']]},
+
+  {n:6,s:2,title:'Machine Learning & Deep Learning',dur:'6–7 Weeks',lvl:'Intermediate',
+   tools:[['Claude Project','ch-claude'],['GPT: Code Reviewer','ch-gpt'],['GPT: ML Debugger','ch-gpt']],
+   summary:'The core of AI. Progress from classical machine learning through deep neural networks. Heavy emphasis on building and debugging real models in PyTorch.',
+   outcomes:['Train and evaluate classical ML models from scratch and with scikit-learn','Build deep neural networks in PyTorch from first principles','Understand and apply CNNs, RNNs, and attention mechanisms','Diagnose and fix common training problems systematically','Apply transfer learning to accelerate model development'],
+   topics:[['Supervised Learning','Regression, decision trees, random forests, gradient boosting, SVMs'],['Unsupervised Learning','K-means, PCA, DBSCAN, autoencoders, dimensionality reduction'],['Neural Networks','Perceptrons, activations, forward pass, backpropagation, layer types'],['PyTorch','Tensors, autograd, nn.Module, DataLoaders, training loops'],['Optimisation','SGD, Adam, learning rate schedules, loss functions, batch normalisation'],['CNNs','Convolutional layers, pooling, feature maps, image classification'],['RNNs & LSTMs','Sequence modelling, vanishing gradients, text and time-series'],['Attention Mechanism','Self-attention from scratch — the key innovation behind transformers'],['Model Evaluation','Train/val/test splits, cross-validation, bias-variance tradeoff'],['Regularisation','Dropout, L1/L2, early stopping, data augmentation'],['Debugging Models','Loss curves, gradient flow, activation statistics, failure modes']]},
+
+  {n:7,s:2,title:'Hardware & Infrastructure',dur:'2–3 Weeks',lvl:'Intermediate',
+   tools:[['Claude Project','ch-claude'],['GPT: ML Debugger','ch-gpt']],
+   summary:'Understanding the hardware that runs AI changes how you think about model design, cost, and deployment.',
+   outcomes:['Explain how GPUs accelerate deep learning and why they are essential','Profile and optimise PyTorch code for GPU utilisation','Apply quantisation, pruning, and distillation to reduce model cost','Choose appropriate cloud infrastructure for training and serving'],
+   topics:[['CPU vs GPU','Parallelism, cores, memory bandwidth — why GPUs dominate AI'],['GPU Architecture','CUDA cores, VRAM, tensor cores, NVIDIA vs AMD vs Apple Silicon'],['CUDA Basics','How PyTorch talks to GPUs, memory management, OOM errors'],['TPUs & Specialised HW','Google TPUs, AWS Trainium/Inferentia, Groq LPU'],['Model Quantisation','INT8, INT4, FP16, BF16 — reducing precision to cut cost'],['Model Pruning','Removing redundant weights, structured vs unstructured'],['Model Distillation','Compressing large models into smaller, faster ones'],['Inference Optimisation','Batching, KV cache, speculative decoding, vLLM, llama.cpp'],['Local AI','Running models on consumer GPUs, Ollama, LM Studio'],['Cloud Infrastructure','AWS/GCP/Azure GPU instances, spot instances, cost optimisation']]},
+
+  {n:8,s:2,title:'AI Fundamentals & History',dur:'2 Weeks',lvl:'Beginner–Intermediate',
+   tools:[['Claude Project','ch-claude'],['Gem: Paper Reader','ch-gem'],['NotebookLM','ch-nb']],
+   summary:'Context and perspective. The broader view of AI as a field — its history, paradigms, enduring ideas, and the open questions defining current research.',
+   outcomes:['Trace the key milestones of AI from symbolic systems to deep learning','Explain the difference between narrow AI, AGI, and superintelligence','Describe reinforcement learning and where it fits in the AI landscape','Navigate the current AI landscape: key labs, open vs closed models','Read and extract value from AI research papers efficiently'],
+   topics:[['AI vs ML vs DL','The nested hierarchy — definitions, relationships, misconceptions'],['AI History','Symbolic AI, expert systems, the two AI winters, the deep learning renaissance'],['Search & Planning','A*, minimax, MCTS — reasoning and planning without learning'],['Reinforcement Learning','Agents, environments, rewards, Q-learning, policy gradients, PPO, RLHF'],['Narrow AI vs AGI','What current AI can and cannot do, benchmarks, the AGI debate'],['AI Research Landscape','OpenAI, Anthropic, Google DeepMind, Meta AI, Mistral'],['Reading AI Papers','How to navigate arXiv, understand paper structure, extract key ideas']]},
+
+  {n:9,s:3,title:'Computer Vision',dur:'3–4 Weeks',lvl:'Intermediate–Advanced',
+   tools:[['Claude Project','ch-claude'],['GPT: ML Debugger','ch-gpt']],
+   summary:'Vision is one of the most mature and impactful areas of AI. The full modern vision stack — from CNNs to diffusion models.',
+   outcomes:['Build image classification models using CNNs and Vision Transformers','Apply object detection and segmentation to real problems','Use pre-trained vision models via transfer learning and fine-tuning','Understand how diffusion models generate images'],
+   topics:[['Image Fundamentals','Pixels, channels, colour spaces, preprocessing and augmentation'],['CNNs in Depth','Architecture design, receptive fields, ResNet, VGG, EfficientNet'],['Vision Transformers','ViT — applying attention to image patches, comparison with CNNs'],['Object Detection','YOLO, Faster R-CNN, anchor boxes, bounding box regression'],['Image Segmentation','Semantic vs instance segmentation, U-Net, Mask R-CNN, SAM'],['Transfer Learning','Fine-tuning ImageNet models, feature extraction, few-shot vision'],['Generative Vision','GANs, VAEs, introduction to diffusion models'],['Diffusion Models','DDPM, Stable Diffusion, DALL-E — how text-to-image works'],['Vision in Production','OpenCV, Torchvision, ONNX export, deploying vision APIs']]},
+
+  {n:10,s:3,title:'Speech & Audio AI',dur:'2–3 Weeks',lvl:'Intermediate',
+   tools:[['Claude Project','ch-claude'],['GPT: ML Debugger','ch-gpt']],
+   summary:'Voice is rapidly becoming a primary AI interface. The full speech AI stack — from audio processing to building voice agents.',
+   outcomes:['Process and represent audio data for machine learning','Use Whisper and other ASR models for speech transcription','Generate speech using neural TTS systems','Build voice agent pipelines combining STT, LLM, and TTS'],
+   topics:[['Audio Fundamentals','Waveforms, sampling rate, bit depth, Fourier transforms'],['Audio Features','Spectrograms, MFCCs, mel filterbanks — representing audio as learnable data'],['Speech Recognition','Whisper, wav2vec2 — how speech becomes text, fine-tuning ASR'],['Text-to-Speech','Neural TTS, ElevenLabs, Coqui, XTTS — generating natural speech'],['Voice Cloning','Speaker embeddings, zero-shot cloning, ethical considerations'],['Audio Classification','Sound event detection, music classification, keyword spotting'],['Voice Agents','STT to LLM to TTS pipelines, latency optimisation, real-time streaming'],['Audio Generation','MusicGen, AudioCraft — AI-generated music and sound effects']]},
+
+  {n:11,s:3,title:'Multimodal AI',dur:'2–3 Weeks',lvl:'Advanced',
+   tools:[['Claude Project','ch-claude'],['Gem: Paper Reader','ch-gem']],
+   summary:'The most capable AI systems today handle text, images, audio, and video simultaneously. How multimodal models work and where the field is heading.',
+   outcomes:['Explain how vision-language models combine image and text understanding','Use GPT-4V, Claude, and Gemini for multimodal tasks via API','Understand CLIP and contrastive learning for cross-modal representations','Build applications that combine vision, audio, and language'],
+   topics:[['Multimodal Foundations','What multimodal means, early fusion vs late fusion, cross-attention'],['CLIP & Contrastive Learning','Aligning image and text embeddings — the foundation of multimodal AI'],['Vision-Language Models','LLaVA, InstructBLIP, PaliGemma — open VLMs and how they are trained'],['Frontier Multimodal Models','GPT-4V, Claude, Gemini — capabilities, APIs, and practical use'],['Video Understanding','Video transformers, temporal modelling, video captioning'],['Audio-Language Models','Whisper + LLM pipelines, Gemini audio, spoken QA'],['Multimodal Applications','Document understanding, visual QA, image-based agents'],['Evaluation','Benchmarks for multimodal models, hallucination in vision']]},
+
+  {n:12,s:3,title:'Large Language Models',dur:'5–6 Weeks',lvl:'Intermediate–Advanced',
+   tools:[['Claude Project','ch-claude'],['Gem: Paper Reader','ch-gem'],['NotebookLM','ch-nb']],
+   summary:'The most transformative AI development of the decade. Deep on how LLMs work — Transformer architecture, training, alignment, RAG, and production deployment.',
+   outcomes:['Explain every component of the Transformer architecture from first principles','Describe pre-training, fine-tuning, RLHF, and instruction tuning in detail','Write effective prompts using structured prompt engineering techniques','Build RAG systems that ground LLM outputs in external knowledge','Fine-tune open-source LLMs using LoRA and QLoRA'],
+   topics:[['Transformer Architecture','Self-attention, multi-head attention, positional encoding, feed-forward layers'],['Tokenisation','BPE, WordPiece, SentencePiece — how text becomes numbers'],['Pre-training','Next-token prediction, masked LM, compute requirements, training datasets'],['Fine-tuning','Supervised fine-tuning, instruction tuning, task-specific adaptation'],['RLHF & Alignment','Reward models, PPO, Constitutional AI, DPO, safety guardrails'],['Prompt Engineering','Zero-shot, few-shot, chain-of-thought, system prompts, structured output'],['Embeddings','What embeddings are, cosine similarity, semantic search'],['RAG','Retrieval-augmented generation — chunking, indexing, retrieval, reranking'],['Reranking','Cross-encoders, Cohere Rerank, ColBERT — improving retrieval quality'],['Efficient Fine-tuning','LoRA, QLoRA — fine-tuning large models on consumer hardware'],['Context & Memory','Context windows, long-context models, KV cache'],['Evaluation','Hallucination, BLEU/ROUGE, human eval, benchmarks']]},
+
+  {n:13,s:3,title:'Knowledge Graphs & Structured Knowledge',dur:'2–3 Weeks',lvl:'Intermediate',
+   tools:[['Claude Project','ch-claude'],['Gem: Paper Reader','ch-gem']],
+   summary:'LLMs are powerful but fuzzy. Knowledge graphs provide structured, verifiable, queryable knowledge that complements what LLMs do well.',
+   outcomes:['Build and query knowledge graphs using Neo4j and SPARQL','Understand ontologies and semantic web standards','Combine knowledge graphs with LLMs for grounded outputs','Apply graph neural networks to graph-structured data'],
+   topics:[['Knowledge Graph Basics','Nodes, edges, triples, RDF — representing structured knowledge'],['Ontologies','OWL, SKOS, schema.org — defining vocabularies and relationships'],['Neo4j & Cypher','Graph database fundamentals, Cypher query language'],['SPARQL','Querying semantic web data, linked data, Wikidata and DBpedia'],['KG + LLM Integration','GraphRAG, using KGs to ground LLM outputs, fact verification'],['Entity Resolution','Deduplication, entity linking, NER for KG population'],['Graph Neural Networks','Node classification, link prediction, GCN, GraphSAGE'],['Enterprise KG Patterns','KG for recommendation, search, compliance, and Q&A']]},
+
+  {n:14,s:3,title:'Connectivity, APIs & JavaScript',dur:'3–4 Weeks',lvl:'Intermediate',
+   tools:[['Claude Project','ch-claude'],['GPT: Code Reviewer','ch-gpt']],
+   summary:'AI does not live in isolation. Connecting AI to the world — calling APIs, async patterns, cloud infrastructure, and AI-powered web applications.',
+   outcomes:['Call REST APIs with authentication, rate limits, streaming, and error handling','Build async data pipelines that feed and connect AI models','Deploy AI workloads to cloud platforms','Build AI-powered web applications using JavaScript and Node.js'],
+   topics:[['REST APIs','HTTP methods, JSON, status codes, authentication — API keys, OAuth, JWTs'],['Python HTTP','requests, httpx, async API calls, streaming responses, retry logic'],['Async & Concurrency','async/await in Python and JS, asyncio, concurrent API calls'],['Latency vs Cost vs Quality','The three-way tradeoff in AI systems — when to optimise for each'],['AI API Calls','Sending prompts, handling responses, managing tokens, costs, and errors'],['JavaScript Fundamentals','Variables, functions, async/await, promises, ES6+'],['Node.js for AI','Building API servers, calling LLM APIs from Node, Express basics'],['AI in the Browser','Calling AI APIs from frontend apps, React + AI, streaming to UI'],['Vector Databases','Pinecone, Weaviate, Chroma, pgvector — storing and querying embeddings'],['Cloud Basics','AWS/GCP/Azure — compute, storage, serverless functions for AI']]},
+
+  {n:15,s:3,title:'AI Tools & Ecosystem',dur:'2–3 Weeks',lvl:'Intermediate',
+   tools:[['Claude Project','ch-claude']],
+   summary:'A practical survey of the tools every AI practitioner should know — from Hugging Face through orchestration libraries to evaluation frameworks.',
+   outcomes:['Navigate the modern AI tooling ecosystem confidently','Use Hugging Face Hub, LangChain, and LlamaIndex effectively','Track and compare experiments with MLflow or Weights & Biases','Build quick AI demos with Gradio and Streamlit'],
+   topics:[['Hugging Face','Models Hub, Datasets, Transformers library, Spaces, Inference API, PEFT'],['LangChain','Chains, prompts, memory, tools, agents — composing LLM applications'],['LlamaIndex','Document indexing, RAG pipelines, query engines, data connectors'],['Experiment Tracking','MLflow, Weights & Biases — logging metrics, comparing runs'],['Notebooks & IDEs','Jupyter, Google Colab, VS Code with AI extensions'],['Deployment Tools','Gradio, Streamlit — building fast AI demos and internal tools'],['Fine-tuning Tools','LoRA, QLoRA, Axolotl, Unsloth — efficient fine-tuning in practice'],['Evaluation Frameworks','RAGAS for RAG, DeepEval, LangSmith — testing AI system outputs']]},
+
+  {n:16,s:3,title:'Interface Tools vs. API Access',dur:'1–2 Weeks',lvl:'Beginner–Intermediate',
+   tools:[['Claude Project','ch-claude'],['GPT: Quiz Master','ch-gpt']],
+   summary:'The difference between chat interfaces and programmatic API access determines what you can automate, customise, and integrate.',
+   outcomes:['Articulate exactly what API access enables that chat interfaces cannot','Use the OpenAI API, Anthropic API, and open-source alternatives fluently','Build a working application that calls an LLM API with custom behaviour','Manage token costs, context windows, and rate limits in production'],
+   topics:[['Chat Interfaces','ChatGPT, Claude.ai, Gemini — capabilities, limitations, and use cases'],['What APIs Enable','Automation, integration, custom UIs, bulk processing, system prompts'],['OpenAI API','Chat completions, embeddings, function calling, assistants API, vision'],['Anthropic API','Claude API, tool use, extended thinking, document processing, batch API'],['Open-Source APIs','Ollama, Together AI, Groq, Replicate — local and cheap alternatives'],['Pricing & Token Management','Token counting, cost estimation, rate limits, context window planning'],['System Prompts','Customising model behaviour, personas, output format, safety guardrails'],['Function Calling','Structured tool use, JSON mode, getting reliable structured outputs']]},
+
+  {n:17,s:4,title:'AI in Specific Domains',dur:'3–4 Weeks',lvl:'Intermediate–Advanced',
+   tools:[['Claude Project','ch-claude'],['Gem: Paper Reader','ch-gem'],['NotebookLM','ch-nb']],
+   summary:'AI looks different in every industry. A survey of the most impactful applied domains — both the technical patterns and the practical context.',
+   outcomes:['Apply AI techniques appropriately within at least two specialised domains','Understand regulatory and data constraints in healthcare and finance','Use code generation models and AI coding tools effectively','Identify the AI patterns most valuable in scientific research'],
+   topics:[['AI for Code','GitHub Copilot, Cursor, code generation models, automated testing'],['AI in Healthcare','Medical imaging, clinical NLP, EHR analysis, FDA regulations, HIPAA'],['AI in Finance','Algorithmic trading, fraud detection, risk modelling, NLP for filings'],['AI for Science','AlphaFold, drug discovery, materials science, scientific literature mining'],['AI in Legal','Contract analysis, legal research, document review, compliance AI'],['AI in Education','Personalised tutoring, automated grading, content generation'],['AI in Creative Fields','Image/music/video generation, creative tools, IP and copyright'],['Domain Adaptation','Fine-tuning for domain language, few-shot adaptation, RAG for domain knowledge']]},
+
+  {n:18,s:4,title:'Responsible AI & Governance',dur:'2–3 Weeks',lvl:'Intermediate',
+   tools:[['Claude Project','ch-claude'],['Gem: Paper Reader','ch-gem'],['NotebookLM','ch-nb']],
+   summary:'Building AI responsibly is a professional and increasingly legal requirement. Bias, fairness, transparency, red-teaming, and the regulatory landscape.',
+   outcomes:['Identify, measure, and mitigate bias in datasets and model outputs','Apply explainability techniques to make model decisions interpretable','Conduct basic red-teaming and adversarial testing of AI systems','Navigate key AI regulations including the EU AI Act'],
+   topics:[['Bias & Fairness','Sources of bias, fairness metrics, mitigation strategies'],['Explainability (XAI)','SHAP, LIME, attention visualisation — making model decisions interpretable'],['AI Safety','Alignment problem, reward hacking, goal misgeneralisation, existential risk basics'],['Red-Teaming','Adversarial prompting, jailbreaks, prompt injection — testing AI robustness'],['Privacy in AI','Differential privacy, federated learning, PII in training data, GDPR'],['EU AI Act','Risk categories, prohibited uses, compliance requirements, timeline'],['US AI Policy','Executive orders, NIST AI RMF, sector-specific regulations'],['Organisational Governance','AI governance frameworks, model cards, responsible release'],['Environmental Impact','Energy use of training and inference, carbon footprint, sustainable AI']]},
+
+  {n:19,s:4,title:'Business & Strategy for AI',dur:'2 Weeks',lvl:'Beginner–Intermediate',
+   tools:[['Claude Project','ch-claude'],['Gem: Project Architect','ch-gem']],
+   summary:'Technical excellence alone does not make AI successful in organisations. Evaluate AI opportunities, communicate with stakeholders, and measure business impact.',
+   outcomes:['Evaluate AI opportunities and identify where AI genuinely adds value','Build a business case for AI investment with cost-benefit analysis','Communicate AI capabilities and limitations to non-technical audiences','Understand the competitive dynamics and moats in the AI industry'],
+   topics:[['AI Opportunity Assessment','Where AI creates value vs. where it is hype — a practical framework'],['Build vs Buy vs API','When to train custom models, fine-tune, or use APIs'],['AI ROI & Cost Modelling','Token costs, compute costs, human review costs, measuring business impact'],['AI Product Design','Scoping AI features, human-AI interaction patterns, failure mode design'],['Communicating AI','Explaining models to executives, setting expectations, managing AI projects'],['AI Strategy','Competitive moats, data network effects, foundation model vs application layer'],['AI Team Structure','ML engineers, data scientists, AI product managers — roles and collaboration'],['Change Management','Adopting AI in organisations, workflow redesign, employee concerns']]},
+
+  {n:20,s:4,title:'Agentic AI & Automation',dur:'4–5 Weeks',lvl:'Advanced',
+   tools:[['Claude Project','ch-claude'],['GPT: Code Reviewer','ch-gpt'],['Gem: Project Architect','ch-gem']],
+   summary:'The frontier of applied AI. Agents plan, use tools, browse the web, execute code, and complete multi-step tasks autonomously.',
+   outcomes:['Explain the agent loop and implement it from scratch','Build agents with tool use, persistent memory, and multi-step planning','Orchestrate multi-agent systems using CrewAI and AutoGen','Apply safety patterns: human-in-the-loop, sandboxing, audit trails','Build no-code automation pipelines using n8n'],
+   topics:[['Agent Architecture','The ReAct loop — Reason, Act, Observe; tool calling, planning, reflection'],['Tool Use','Function calling, code execution, web search, file I/O, database access'],['Memory Systems','Short-term context, long-term vector memory, episodic memory'],['Multi-Agent Systems','Orchestrators, sub-agents, CrewAI, AutoGen, LangGraph'],['Agent Frameworks','Building agents with LangChain, LlamaIndex, and raw API calls'],['Workflow Automation','n8n, Zapier AI, Make — no-code and low-code AI automation'],['Computer Use','Agents that operate browsers and desktop UIs — Playwright, Computer Use API'],['Agent Evaluation','Measuring performance, trajectory evaluation, task success metrics'],['Agent Safety','Prompt injection, sandboxing, human-in-the-loop, rate limiting, audit logs'],['Production Agents','Deploying agents reliably, handling failures, cost control, observability']]},
+
+  {n:21,s:4,title:'MLOps & Production Deployment',dur:'3–4 Weeks',lvl:'Intermediate–Advanced',
+   tools:[['Claude Project','ch-claude'],['GPT: Code Reviewer','ch-gpt'],['Gem: Project Architect','ch-gem']],
+   summary:'Getting AI systems into production reliably, keeping them working, and knowing when they break. The full production stack.',
+   outcomes:['Build and serve model APIs using FastAPI and Docker','Package AI applications into containers and deploy them reliably','Monitor models in production for drift, degradation, and failures','Design automated retraining pipelines triggered by performance drops','Version, register, and promote models through staging to production'],
+   topics:[['FastAPI','Building model-serving REST APIs — the production standard for ML'],['Docker','Containerising AI apps, Dockerfiles, docker-compose, registry'],['Kubernetes Basics','Orchestrating containers at scale, deployments, services, scaling'],['Model Serving','TorchServe, BentoML, Triton Inference Server — dedicated serving infrastructure'],['Model Monitoring','Detecting data drift, concept drift, model degradation — Evidently, Arize'],['Batch vs Real-Time','Offline batch inference vs online real-time serving — architecture tradeoffs'],['Retraining Pipelines','Automated retraining triggers, data freshness, evaluation gates'],['Rollback Strategies','Blue-green deployments, model rollback triggers, safe promotion gates'],['A/B Testing Models','Shadow deployment, canary releases, traffic splitting'],['Feature Stores','Feast, Tecton — managing features between training and serving'],['Model Registry','MLflow Model Registry, W&B Artifacts — versioning and promoting models'],['Observability','Logging predictions, latency tracing, alerting, dashboards']]},
+
+  {n:22,s:4,title:'Capstone & Applied AI',dur:'4–5 Weeks',lvl:'Advanced',
+   tools:[['Claude Project','ch-claude'],['Gem: Project Architect','ch-gem'],['NotebookLM','ch-nb']],
+   summary:'Everything comes together. Design and build a complete, production-quality AI application — applying engineering best practices, responsible AI principles, and business thinking.',
+   outcomes:['Design an end-to-end AI system architecture from requirements to deployment','Build a production-quality AI application with proper testing and documentation','Apply monitoring, logging, and cost control in a live system','Present your project with a technical write-up and live demonstration'],
+   topics:[['System Design for AI','Architecting AI applications — components, data flow, failure modes, scalability'],['Production AI','Monitoring, logging, latency, cost optimisation, caching strategies'],['AI Product Thinking','Scoping AI features, measuring impact, defining success metrics'],['Security in Production','PII redaction, prompt injection defence, API key management'],['Capstone Project','Build a complete AI application of your choice'],['Documentation','Technical write-up, architecture diagrams, README, demo video'],['Presentation & Review','Presenting your system, explaining decisions, incorporating feedback'],['Staying Current','arXiv, AI newsletters, communities, conferences — how to keep learning']]}
+];
+
+// ═══════════════════════════════════════════════
+// STATE & PERSISTENCE
+// ═══════════════════════════════════════════════
+var state = {topics:{}, modules:{}};
+var userId = null;
+var currentPanel = 'dash';
+
+function storeKey() { return 'ai_curriculum_' + userId; }
+
+function saveState() {
+  try {
+    localStorage.setItem(storeKey(), JSON.stringify(state));
+    setSyncStatus('ok', 'Saved · ' + userId);
+  } catch(e) {
+    setSyncStatus('err', 'Save failed');
+  }
+}
+
+function loadState() {
+  try {
+    var s = localStorage.getItem(storeKey());
+    if (s) state = JSON.parse(s);
+  } catch(e) {}
+}
+
+function setSyncStatus(cls, label) {
+  var dot = document.getElementById('sync-dot');
+  var lbl = document.getElementById('sync-lbl');
+  dot.className = 'sync-dot ' + cls;
+  lbl.textContent = label;
+}
+
+// ═══════════════════════════════════════════════
+// SETUP
+// ═══════════════════════════════════════════════
+function tryStart() {
+  var saved = null;
+  try { saved = localStorage.getItem('ai_curriculum_uid'); } catch(e) {}
+  if (saved) {
+    userId = saved;
+    document.getElementById('id-input').value = saved;
+    document.getElementById('setup-overlay').style.display = 'none';
+    loadState();
+    buildAll();
+  }
+}
+
+document.getElementById('go-btn').addEventListener('click', function() {
+  var val = document.getElementById('id-input').value.trim().toLowerCase().replace(/\s+/g, '-');
+  if (!val || val.length < 3 || !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(val) && val.length < 3) {
+    if (val.length < 3 || !/^[a-z0-9-]+$/.test(val)) {
+      document.getElementById('id-err').style.display = 'block';
+      return;
+    }
+  }
+  document.getElementById('id-err').style.display = 'none';
+  userId = val;
+  try { localStorage.setItem('ai_curriculum_uid', userId); } catch(e) {}
+  document.getElementById('setup-overlay').style.display = 'none';
+  loadState();
+  buildAll();
+});
+
+document.getElementById('id-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('go-btn').click();
+});
+
+// ═══════════════════════════════════════════════
+// BUILD UI
+// ═══════════════════════════════════════════════
+function buildAll() {
+  buildNav();
+  buildDashboard();
+  buildModPanels();
+  updateStats();
+  setSyncStatus('ok', 'Saved · ' + userId);
+}
+
+// ── NAV ──────────────────────────────────────
+function buildNav() {
+  var nav = document.getElementById('sb-nav');
+  // Remove existing module rows
+  var existing = nav.querySelectorAll('[data-nav-mod]');
+  for (var i = 0; i < existing.length; i++) nav.removeChild(existing[i]);
+
+  MODS.forEach(function(m) {
+    var row = document.createElement('div');
+    row.className = 'nav-row' + (state.modules[m.n] ? ' done' : '');
+    row.id = 'nav-' + m.n;
+    row.setAttribute('data-nav-mod', m.n);
+    row.innerHTML =
+      '<div class="nav-n">' + m.n + '</div>' +
+      '<div class="nav-lbl">' + m.title + '</div>' +
+      '<div class="nav-ck">✓</div>';
+    (function(mn) {
+      row.addEventListener('click', function() { showMod(mn); });
+    })(m.n);
+    nav.appendChild(row);
+  });
+}
+
+function refreshNav() {
+  MODS.forEach(function(m) {
+    var row = document.getElementById('nav-' + m.n);
+    if (!row) return;
+    var isDone = !!state.modules[m.n];
+    var isCurrent = currentPanel === String(m.n);
+    row.className = 'nav-row' + (isDone ? ' done' : '') + (isCurrent ? ' active' : '');
+  });
+  var dashRow = document.getElementById('nav-dash');
+  if (dashRow) {
+    dashRow.className = 'nav-row' + (currentPanel === 'dash' ? ' active' : '');
+  }
+}
+
+// ── DASHBOARD ────────────────────────────────
+function buildDashboard() {
+  var container = document.getElementById('stage-secs');
+  container.innerHTML = '';
+
+  STAGES.forEach(function(stage) {
+    var sec = document.createElement('div');
+    sec.className = 'stage-sec';
+    sec.innerHTML =
+      '<div class="stage-hdr">' +
+        '<div class="stage-big-n">0' + stage.n + '</div>' +
+        '<div>' +
+          '<div class="stage-info-name">' + stage.name + '</div>' +
+          '<div class="stage-info-range">' + stage.range + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mod-grid" id="grid-' + stage.n + '"></div>';
+    container.appendChild(sec);
+
+    var grid = document.getElementById('grid-' + stage.n);
+    stage.mods.forEach(function(mn) {
+      var m = MODS[mn - 1];
+      var isDone = !!state.modules[mn];
+      var topicsDone = countTopicsDone(mn, m);
+      var pct = Math.round(topicsDone / m.topics.length * 100);
+      var card = document.createElement('div');
+      card.className = 'mod-card' + (isDone ? ' done' : '');
+      card.id = 'mc-' + mn;
+      card.innerHTML =
+        '<div class="mc-num">MODULE ' + pad(mn) + '</div>' +
+        '<div class="mc-title">' + m.title + '</div>' +
+        '<div class="mc-bar"><div class="mc-fill" id="mcf-' + mn + '" style="width:' + pct + '%"></div></div>' +
+        '<div class="mc-sub" id="mcs-' + mn + '">' + topicsDone + '/' + m.topics.length + ' topics' + (isDone ? ' · Complete ✓' : '') + '</div>';
+      (function(n) {
+        card.addEventListener('click', function() { showMod(n); });
+      })(mn);
+      grid.appendChild(card);
+    });
+  });
+}
+
+function refreshDashCard(mn) {
+  var m = MODS[mn - 1];
+  var card = document.getElementById('mc-' + mn);
+  if (!card) return;
+  var isDone = !!state.modules[mn];
+  var topicsDone = countTopicsDone(mn, m);
+  var pct = Math.round(topicsDone / m.topics.length * 100);
+  card.className = 'mod-card' + (isDone ? ' done' : '');
+  var fill = document.getElementById('mcf-' + mn);
+  if (fill) fill.style.width = pct + '%';
+  var sub = document.getElementById('mcs-' + mn);
+  if (sub) sub.textContent = topicsDone + '/' + m.topics.length + ' topics' + (isDone ? ' · Complete ✓' : '');
+}
+
+// ── MODULE PANELS ────────────────────────────
+function buildModPanels() {
+  var container = document.getElementById('mod-panels');
+  container.innerHTML = '';
+
+  MODS.forEach(function(m) {
+    var panel = document.createElement('div');
+    panel.className = 'panel';
+    panel.id = 'panel-' + m.n;
+
+    var chips = m.tools.map(function(t) {
+      return '<div class="chip ' + t[1] + '"><div class="chip-dot"></div>' + t[0] + '</div>';
+    }).join('');
+
+    var outcomes = m.outcomes.map(function(o) {
+      return '<div class="outcome"><div class="out-arr">→</div><div>' + o + '</div></div>';
+    }).join('');
+
+    var topicRows = m.topics.map(function(t, i) {
+      var key = m.n + '-' + i;
+      var done = !!state.topics[key];
+      return '<div class="topic-row' + (done ? ' done' : '') + '" id="tr-' + key + '">' +
+        '<div class="t-check"><div class="t-box"><div class="t-tick">✓</div></div></div>' +
+        '<div class="t-name-col"><div class="t-name">' + t[0] + '</div></div>' +
+        '<div class="t-desc">' + t[1] + '</div>' +
+      '</div>';
+    }).join('');
+
+    var isDone = !!state.modules[m.n];
+    var nextBtn = m.n < 22
+      ? '<button class="btn-next" id="btn-next-' + m.n + '">Next Module →</button>'
+      : '';
+
+    panel.innerHTML =
+      '<div class="mod-page">' +
+        '<div class="mod-eye">' +
+          '<div class="mod-eye-num">MODULE ' + pad(m.n) + ' OF 22</div>' +
+          '<div class="badge b-dur">' + m.dur + '</div>' +
+          '<div class="badge b-lvl">' + m.lvl + '</div>' +
+        '</div>' +
+        '<div class="mod-title">' + m.title + '</div>' +
+        '<div class="mod-summary">' + m.summary + '</div>' +
+        '<div class="chips">' + chips + '</div>' +
+        '<div class="sec-lbl">LEARNING OUTCOMES</div>' +
+        '<div class="outcomes">' + outcomes + '</div>' +
+        '<div class="sec-lbl">TOPICS</div>' +
+        '<div class="topics-wrap" id="tw-' + m.n + '">' + topicRows + '</div>' +
+        '<div class="mod-actions">' +
+          '<button class="btn-complete' + (isDone ? ' done' : '') + '" id="btn-done-' + m.n + '">' +
+            (isDone ? '✓ Module Complete' : 'Mark Module Complete') +
+          '</button>' +
+          nextBtn +
+          '<button class="btn-reset" id="btn-reset-' + m.n + '">Reset</button>' +
+        '</div>' +
+      '</div>';
+
+    container.appendChild(panel);
+
+    // Attach listeners directly — no delegation, no scoping issues
+    attachModListeners(m.n);
+  });
+}
+
+function attachModListeners(mn) {
+  var m = MODS[mn - 1];
+
+  // Topic rows — each one gets its own listener
+  m.topics.forEach(function(t, i) {
+    var key = mn + '-' + i;
+    var row = document.getElementById('tr-' + key);
+    if (row) {
+      (function(modN, idx, k) {
+        row.addEventListener('click', function() {
+          toggleTopic(modN, idx, k);
+        });
+      })(mn, i, key);
+    }
+  });
+
+  // Complete button
+  var doneBtn = document.getElementById('btn-done-' + mn);
+  if (doneBtn) {
+    (function(modN) {
+      doneBtn.addEventListener('click', function() {
+        toggleModDone(modN);
+      });
+    })(mn);
+  }
+
+  // Next button
+  var nextBtn = document.getElementById('btn-next-' + mn);
+  if (nextBtn) {
+    (function(modN) {
+      nextBtn.addEventListener('click', function() {
+        showMod(modN + 1);
+      });
+    })(mn);
+  }
+
+  // Reset button
+  var resetBtn = document.getElementById('btn-reset-' + mn);
+  if (resetBtn) {
+    (function(modN) {
+      resetBtn.addEventListener('click', function() {
+        resetMod(modN);
+      });
+    })(mn);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// INTERACTIONS
+// ═══════════════════════════════════════════════
+function toggleTopic(modN, idx, key) {
+  state.topics[key] = !state.topics[key];
+  if (!state.topics[key]) delete state.topics[key];
+
+  var row = document.getElementById('tr-' + key);
+  if (row) row.className = 'topic-row' + (state.topics[key] ? ' done' : '');
+
+  refreshDashCard(modN);
+  updateStats();
+  saveState();
+}
+
+function toggleModDone(mn) {
+  state.modules[mn] = !state.modules[mn];
+  if (!state.modules[mn]) delete state.modules[mn];
+
+  var btn = document.getElementById('btn-done-' + mn);
+  if (btn) {
+    btn.className = 'btn-complete' + (state.modules[mn] ? ' done' : '');
+    btn.textContent = state.modules[mn] ? '✓ Module Complete' : 'Mark Module Complete';
+  }
+
+  refreshNav();
+  refreshDashCard(mn);
+  updateStats();
+  saveState();
+}
+
+function resetMod(mn) {
+  var m = MODS[mn - 1];
+  m.topics.forEach(function(t, i) {
+    var key = mn + '-' + i;
+    delete state.topics[key];
+    var row = document.getElementById('tr-' + key);
+    if (row) row.className = 'topic-row';
+  });
+  delete state.modules[mn];
+
+  var btn = document.getElementById('btn-done-' + mn);
+  if (btn) { btn.className = 'btn-complete'; btn.textContent = 'Mark Module Complete'; }
+
+  refreshNav();
+  refreshDashCard(mn);
+  updateStats();
+  saveState();
+}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+  var panel = document.getElementById('panel-' + id);
+  if (panel) panel.classList.add('active');
+  document.getElementById('main').scrollTop = 0;
+  currentPanel = String(id);
+  refreshNav();
+}
+
+function showDash() {
+  showPanel('dash');
+  buildDashboard(); // refresh cards when returning to dashboard
+}
+
+function showMod(n) {
+  showPanel(n);
+}
+
+function jumpStage(n) {
+  var stage = STAGES[n - 1];
+  if (stage) showMod(stage.mods[0]);
+}
+
+// ═══════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════
+function countTopicsDone(mn, m) {
+  var count = 0;
+  m.topics.forEach(function(t, i) {
+    if (state.topics[mn + '-' + i]) count++;
+  });
+  return count;
+}
+
+function updateStats() {
+  var totalTopics = 0;
+  var doneTopics = 0;
+  var doneMods = 0;
+  MODS.forEach(function(m) { totalTopics += m.topics.length; });
+  Object.keys(state.topics).forEach(function(k) { if (state.topics[k]) doneTopics++; });
+  Object.keys(state.modules).forEach(function(k) { if (state.modules[k]) doneMods++; });
+  var pct = totalTopics > 0 ? Math.round(doneTopics / totalTopics * 100) : 0;
+
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('pct-lbl').textContent = pct + '%';
+  document.getElementById('s-mods').textContent = doneMods;
+  document.getElementById('s-topics').textContent = doneTopics;
+}
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function pad(n) { return n < 10 ? '0' + n : String(n); }
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+tryStart();
+</script>
+</body>
+</html>
